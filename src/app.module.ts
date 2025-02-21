@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CategoryModule } from './category/category.module';
 import { Category } from './category/category.entity';
@@ -11,15 +12,22 @@ import { ProductModule } from './product/product.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: 'localhost',
-      port: 3308,
-      username: 'root', // Change this as per your MySQL user
-      password: '', // Change this as per your MySQL password
-      database: 'nest_db', // Ensure this database exists
-      entities: [Category, Subcategory, MoreSubcategory, Product],
-      synchronize: true, // Set to false in production
+    ConfigModule.forRoot({
+      isGlobal: true, // რომ ყველა მოდულში ხელმისაწვდომი იყოს
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: configService.get<'mysql'>('DB_TYPE'),
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get<string>('DB_USERNAME'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_NAME'),
+        entities: [Category, Subcategory, MoreSubcategory, Product],
+        synchronize: configService.get<boolean>('DB_SYNC') === true, // production-ში false
+      }),
     }),
     CategoryModule,
     SubcategoryModule,
